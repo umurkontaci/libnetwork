@@ -136,6 +136,7 @@ func (ncfg *networkConfiguration) MarshalJSON() ([]byte, error) {
 	nMap["BridgeName"] = ncfg.BridgeName
 	nMap["EnableIPv6"] = ncfg.EnableIPv6
 	nMap["EnableIPMasquerade"] = ncfg.EnableIPMasquerade
+	nMap["SNATAddress"] = ncfg.SNATAddress
 	nMap["EnableICC"] = ncfg.EnableICC
 	nMap["Mtu"] = ncfg.Mtu
 	nMap["Internal"] = ncfg.Internal
@@ -181,6 +182,7 @@ func (ncfg *networkConfiguration) UnmarshalJSON(b []byte) error {
 	ncfg.DefaultBindingIP = net.ParseIP(nMap["DefaultBindingIP"].(string))
 	ncfg.DefaultGatewayIPv4 = net.ParseIP(nMap["DefaultGatewayIPv4"].(string))
 	ncfg.DefaultGatewayIPv6 = net.ParseIP(nMap["DefaultGatewayIPv6"].(string))
+	ncfg.SNATAddress = net.ParseIP(nMap["SNATAddress"].(string))
 	ncfg.ID = nMap["ID"].(string)
 	ncfg.BridgeName = nMap["BridgeName"].(string)
 	ncfg.EnableIPv6 = nMap["EnableIPv6"].(bool)

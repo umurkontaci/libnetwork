@@ -15,4 +15,7 @@ const (
 
 	// DefaultBridge label
 	DefaultBridge = "com.docker.network.bridge.default_bridge"
+
+	// SNATAddress label for source address nat
+	SNATAddress = "com.docker.network.bridge.snat_address"
 )

@@ -919,6 +919,17 @@ func TestValidateConfig(t *testing.T) {
 		t.Fatalf("Unexpected validation error on v6 default gateway")
 	}
 
+	c.SNATAddress = net.ParseIP("192.168.1.1")
+	err = c.Validate()
+	if err != nil {
+		t.Fatalf("Unexpected validation error with SNAT Address: %v", err)
+	}
+	c.EnableIPMasquerade = true
+	err = c.Validate()
+	if err == nil {
+		t.Fatalf("Failed to detect invalid configuration with SNAT and MASQUERADE enabled at the same time")
+	}
+
 	c.AddressIPv6 = nil
 	err = c.Validate()
 	if err == nil {

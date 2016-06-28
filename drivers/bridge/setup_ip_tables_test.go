@@ -12,6 +12,7 @@ import (
 
 const (
 	iptablesTestBridgeIP = "192.168.42.1"
+	snatIP               = "192.168.1.1"
 )
 
 func TestProgramIPTable(t *testing.T) {
@@ -32,6 +33,7 @@ func TestProgramIPTable(t *testing.T) {
 	}{
 		{iptRule{table: iptables.Filter, chain: "FORWARD", args: []string{"-d", "127.1.2.3", "-i", "lo", "-o", "lo", "-j", "DROP"}}, "Test Loopback"},
 		{iptRule{table: iptables.Nat, chain: "POSTROUTING", preArgs: []string{"-t", "nat"}, args: []string{"-s", iptablesTestBridgeIP, "!", "-o", DefaultBridgeName, "-j", "MASQUERADE"}}, "NAT Test"},
+		{iptRule{table: iptables.Nat, chain: "POSTROUTING", preArgs: []string{"-t", "nat"}, args: []string{"-s", iptablesTestBridgeIP, "!", "-o", DefaultBridgeName, "-j", "SNAT", "--to-source", snatIP}}, "SNAT Test"},
 		{iptRule{table: iptables.Filter, chain: "FORWARD", args: []string{"-i", DefaultBridgeName, "!", "-o", DefaultBridgeName, "-j", "ACCEPT"}}, "Test ACCEPT NON_ICC OUTGOING"},
 		{iptRule{table: iptables.Filter, chain: "FORWARD", args: []string{"-o", DefaultBridgeName, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}}, "Test ACCEPT INCOMING"},
 		{iptRule{table: iptables.Filter, chain: "FORWARD", args: []string{"-i", DefaultBridgeName, "-o", DefaultBridgeName, "-j", "ACCEPT"}}, "Test enable ICC"},
@@ -74,6 +76,9 @@ func TestSetupIPChains(t *testing.T) {
 	assertBridgeConfig(config, br, d, t)
 
 	config.EnableIPMasquerade = false
+	assertBridgeConfig(config, br, d, t)
+
+	config.SNATAddress = net.ParseIP("192.168.1.1")
 	assertBridgeConfig(config, br, d, t)
 }
 

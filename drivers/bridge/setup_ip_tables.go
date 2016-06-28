@@ -86,11 +86,11 @@ func (n *bridgeNetwork) setupIPTables(config *networkConfiguration, i *bridgeInt
 			return setupInternalNetworkRules(config.BridgeName, maskedAddrv4, false)
 		})
 	} else {
-		if err = setupIPTablesInternal(config.BridgeName, maskedAddrv4, config.EnableICC, config.EnableIPMasquerade, hairpinMode, true); err != nil {
+		if err = setupIPTablesInternal(config.BridgeName, maskedAddrv4, config.SNATAddress, config.EnableICC, config.EnableIPMasquerade, hairpinMode, true); err != nil {
 			return fmt.Errorf("Failed to Setup IP tables: %s", err.Error())
 		}
 		n.registerIptCleanFunc(func() error {
-			return setupIPTablesInternal(config.BridgeName, maskedAddrv4, config.EnableICC, config.EnableIPMasquerade, hairpinMode, false)
+			return setupIPTablesInternal(config.BridgeName, maskedAddrv4, config.SNATAddress, config.EnableICC, config.EnableIPMasquerade, hairpinMode, false)
 		})
 		natChain, filterChain, _, err := n.getDriverChains()
 		if err != nil {
@@ -128,20 +128,28 @@ type iptRule struct {
 	args    []string
 }
 
-func setupIPTablesInternal(bridgeIface string, addr net.Addr, icc, ipmasq, hairpin, enable bool) error {
+func setupIPTablesInternal(bridgeIface string, addr net.Addr, snatAddr net.IP, icc, ipmasq, hairpin, enable bool) error {
 
 	var (
 		address   = addr.String()
 		natRule   = iptRule{table: iptables.Nat, chain: "POSTROUTING", preArgs: []string{"-t", "nat"}, args: []string{"-s", address, "!", "-o", bridgeIface, "-j", "MASQUERADE"}}
+		snatRule  = iptRule{table: iptables.Nat, chain: "POSTROUTING", preArgs: []string{"-t", "nat"}, args: []string{"-s", address, "!", "-o", bridgeIface, "-j", "SNAT", "--to-source", snatAddr.String()}}
 		hpNatRule = iptRule{table: iptables.Nat, chain: "POSTROUTING", preArgs: []string{"-t", "nat"}, args: []string{"-m", "addrtype", "--src-type", "LOCAL", "-o", bridgeIface, "-j", "MASQUERADE"}}
 		skipDNAT  = iptRule{table: iptables.Nat, chain: DockerChain, preArgs: []string{"-t", "nat"}, args: []string{"-i", bridgeIface, "-j", "RETURN"}}
 		outRule   = iptRule{table: iptables.Filter, chain: "FORWARD", args: []string{"-i", bridgeIface, "!", "-o", bridgeIface, "-j", "ACCEPT"}}
 		inRule    = iptRule{table: iptables.Filter, chain: "FORWARD", args: []string{"-o", bridgeIface, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}}
 	)
 
-	// Set NAT.
+	// Set NAT with MASQUERADE
 	if ipmasq {
 		if err := programChainRule(natRule, "NAT", enable); err != nil {
+			return err
+		}
+	}
+
+	// Set NAT with SNAT
+	if snatAddr != nil {
+		if err := programChainRule(snatRule, "SNAT", enable); err != nil {
 			return err
 		}
 	}

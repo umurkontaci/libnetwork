@@ -62,6 +62,7 @@ type networkConfiguration struct {
 	Mtu                int
 	DefaultBindingIP   net.IP
 	DefaultBridge      bool
+	SNATAddress        net.IP
 	// Internal fields set after ipam data parsing
 	AddressIPv4        *net.IPNet
 	AddressIPv6        *net.IPNet
@@ -168,6 +169,11 @@ func (c *networkConfiguration) Validate() error {
 			return &ErrInvalidGateway{}
 		}
 	}
+
+	if c.EnableIPMasquerade && c.SNATAddress != nil {
+		// can't have both
+		return fmt.Errorf("Cannot have MASQUERADE and SNAT at the same time")
+	}
 	return nil
 }
 
@@ -214,6 +220,10 @@ func (c *networkConfiguration) fromLabels(labels map[string]string) error {
 		case EnableIPMasquerade:
 			if c.EnableIPMasquerade, err = strconv.ParseBool(value); err != nil {
 				return parseErr(label, value, err.Error())
+			}
+		case SNATAddress:
+			if c.SNATAddress = net.ParseIP(value); c.SNATAddress == nil {
+				return parseErr(label, value, "nil ip")
 			}
 		case EnableICC:
 			if c.EnableICC, err = strconv.ParseBool(value); err != nil {
